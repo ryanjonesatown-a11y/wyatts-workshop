@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wyatt's Workshop">
+<meta name="theme-color" content="#0f1728">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<title>Wyatt's Workshop</title>
+<style>
+  :root {
+    --ink: #eef2fb;
+    --ink-soft: #9aa7c2;
+    --glass: rgba(17, 24, 42, 0.78);
+    --glass-strong: rgba(15, 21, 37, 0.94);
+    --raise: rgba(255, 255, 255, 0.07);
+    --raise-hi: rgba(255, 255, 255, 0.13);
+    --line: rgba(255, 255, 255, 0.1);
+    --accent: #ffb703;
+    --accent-2: #ff8a1f;
+    --accent-ink: #3a2600;
+    --good: #35d08a;
+    --warn: #ffb347;
+    --danger: #ff5d6c;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    --radius: 20px;
+    --tray: 232px;
+    --sl: env(safe-area-inset-left, 0px);
+    --sr: env(safe-area-inset-right, 0px);
+    --st: env(safe-area-inset-top, 0px);
+    --sb: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+  body {
+    font-family: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    color: var(--ink); background: #14213d;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+  }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; touch-action: manipulation; }
+  svg.ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  [hidden] { display: none !important; }
+  .glass { background: var(--glass); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid var(--line); box-shadow: var(--shadow); }
+
+  /* ---------- tile tray ---------- */
+  #tray {
+    position: fixed; left: calc(12px + var(--sl)); top: calc(12px + var(--st)); bottom: calc(12px + var(--sb)); width: 232px;
+    border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; transition: transform 0.24s cubic-bezier(.2,.8,.2,1);
+  }
+  #brand { display: flex; align-items: center; gap: 10px; padding: 12px 10px 10px 12px; border-bottom: 1px solid var(--line); }
+  #brand .logo { width: 42px; height: 42px; flex: 0 0 auto; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35)); }
+  #brand .name { flex: 1; min-width: 0; line-height: 1.05; }
+  #brand .name b { display: block; font-size: 17px; font-weight: 800; letter-spacing: 0.01em; }
+  #brand .name span { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; }
+  .ghostBtn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--raise); color: var(--ink-soft); }
+  .ghostBtn:active { transform: scale(0.94); background: var(--raise-hi); }
+  #trayBar { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 14px 4px; }
+  #trayBar h1 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+  #usedCount { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+  #cards { flex: 1; overflow-y: auto; padding: 8px 12px 12px; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 94px; gap: 12px 10px; align-content: start; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
+  .card {
+    position: relative; height: 94px; border-radius: 16px; border: 1px solid var(--line);
+    background: linear-gradient(160deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
+    display: grid; place-items: center; touch-action: pan-y; transition: transform 0.14s, border-color 0.14s, box-shadow 0.14s, background 0.14s;
+  }
+  @media (hover: hover) { .card:hover { background: linear-gradient(160deg, rgba(255,255,255,0.17), rgba(255,255,255,0.06)); } .tool:hover, .act:hover, .ghostBtn:hover { background: var(--raise-hi); } }
+  .card.held { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255, 183, 3, 0.55), 0 8px 22px rgba(255, 150, 0, 0.3); transform: scale(1.04); }
+  .card.empty { opacity: 0.32; }
+  .card svg { width: 66px; height: 66px; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35)); }
+  .badge {
+    position: absolute; right: -5px; top: -5px; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 13px;
+    background: #f4f7ff; color: #16203a; font-weight: 800; font-size: 13px; display: grid; place-items: center; pointer-events: none; box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  }
+  .card.held .badge { background: var(--accent); color: var(--accent-ink); }
+  .card.empty .badge, .card.over .badge { background: var(--danger); color: #fff; }
+  body.view .card { cursor: default; }
+  #standSeg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 6px 12px 2px; padding: 4px; border-radius: 14px; background: rgba(0,0,0,0.25); }
+  #standSeg button { height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--ink-soft); }
+  #standSeg button svg { width: 18px; height: 18px; }
+  #standSeg button.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); box-shadow: 0 3px 10px rgba(255, 150, 0, 0.3); }
+  body.view #standSeg { display: none; }
+  #trayFoot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  .pill { height: 44px; border-radius: 13px; background: var(--raise); font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .pill svg { width: 18px; height: 18px; }
+  .pill:active { transform: scale(0.96); }
+  #mode.unlimited { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); }
+  #trayShow { position: fixed; left: calc(12px + var(--sl)); top: calc(12px + var(--st)); width: 56px; height: 56px; border-radius: 18px; display: none; place-items: center; padding: 7px; }
+  #trayShow img { width: 100%; height: 100%; }
+  body.trayHidden { --tray: 56px; }
+  body.trayHidden #tray { transform: translateX(calc(-100% - 30px)); }
+  body.trayHidden #trayShow { display: grid; }
+
+  /* ---------- top tools ---------- */
+  #tools { position: fixed; right: calc(12px + var(--sr)); top: calc(12px + var(--st)); display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: var(--radius); max-width: calc(100vw - var(--tray) - 40px - var(--sl) - var(--sr)); overflow-x: auto; scrollbar-width: none; }
+  #tools::-webkit-scrollbar { display: none; }
+  .tool { flex: 0 0 auto; }
+  .tool { position: relative; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--raise); transition: transform 0.1s, background 0.12s; }
+  .tool:active { transform: scale(0.92); }
+  .tool:disabled { opacity: 0.28; cursor: default; }
+  .tool.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); box-shadow: 0 4px 14px rgba(255, 150, 0, 0.35); }
+  .tool.on { background: linear-gradient(135deg, #35d08a, #18a878); color: #04281a; }
+  .tool.quake { color: #ffb347; }
+  .sep { width: 1px; height: 28px; margin: 0 3px; background: var(--line); }
+  .pop { position: fixed; right: calc(12px + var(--sr)); top: calc(82px + var(--st)); display: none; gap: 8px; padding: 10px; border-radius: var(--radius); z-index: 3; }
+  .pop.on { display: flex; }
+  .swatch { width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.85); }
+  .swatch.on { box-shadow: 0 0 0 3px var(--accent); }
+  #paintPop { top: auto; right: auto; left: calc(50% + (var(--tray) + 12px) / 2); transform: translateX(-50%); bottom: calc(168px + var(--sb)); z-index: 4; }
+  #gravChip { position: fixed; right: calc(12px + var(--sr)); top: calc(82px + var(--st)); display: none; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; }
+  #gravChip.on { display: flex; }
+  #gravChip .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--good); box-shadow: 0 0 10px currentColor; color: var(--good); }
+  #gravChip.wob .dot { background: var(--warn); color: var(--warn); }
+  #gravChip.bad .dot { background: var(--danger); color: var(--danger); }
+  #gravDrop { height: 36px; padding: 0 14px; border-radius: 999px; background: var(--danger); color: #fff; font-weight: 800; font-size: 13px; }
+
+  /* ---------- docks ---------- */
+  .dock {
+    position: fixed; left: calc(var(--tray) + 24px + var(--sl)); right: calc(12px + var(--sr)); margin: 0 auto; width: fit-content; bottom: calc(14px + var(--sb));
+    display: none; align-items: center; justify-content: center; flex-wrap: wrap; gap: 9px; padding: 10px; border-radius: 24px;
+  }
+  .dock.on { display: flex; }
+  .act { flex: 0 0 auto; width: 60px; height: 64px; border-radius: 16px; background: var(--raise);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 11px; font-weight: 800; color: var(--ink-soft); transition: transform 0.1s, background 0.12s; }
+  .act svg { color: var(--ink); }
+  .act:active { transform: scale(0.93); }
+  .act:disabled { opacity: 0.28; cursor: default; }
+  .act.danger svg { color: var(--danger); }
+  .act.big { width: 76px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 4px 14px rgba(255, 150, 0, 0.35); }
+  .act.big svg { color: var(--accent-ink); width: 32px; height: 32px; }
+  #tiltBox { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 34px; background: transparent; margin: 0; touch-action: none; min-width: 0; }
+  #tilt { width: 100%; }
+  input[type=range]::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, rgba(255,255,255,0.14), rgba(255,183,3,0.75) 50%, rgba(255,255,255,0.14)); }
+  input[type=range]::-moz-range-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, rgba(255,255,255,0.14), rgba(255,183,3,0.75) 50%, rgba(255,255,255,0.14)); }
+  #scrub::-webkit-slider-runnable-track { background: rgba(255,255,255,0.16); }
+  #scrub::-moz-range-track { background: rgba(255,255,255,0.16); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; margin-top: -11px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe08a, var(--accent)); border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
+  input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
+  #quick { display: grid; grid-template-columns: repeat(5, 50px); gap: 5px; }
+  #quick button { height: 34px; border-radius: 10px; background: var(--raise); font-size: 13px; font-weight: 800; }
+  #quick button:active { background: var(--accent); color: var(--accent-ink); }
+  #quick #tiltSign { background: rgba(255,183,3,0.2); color: var(--accent); font-size: 15px; }
+  #scrubBox { flex: 0 1 auto; display: flex; flex-direction: column; gap: 2px; align-items: center; min-width: 0; }
+  #scrub { width: 230px; }
+  #count { font-size: 14px; font-weight: 800; color: var(--ink-soft); }
+  #speed span { font-size: 17px; font-weight: 800; color: var(--ink); line-height: 26px; }
+
+  /* ---------- chips ---------- */
+  .chip {
+    position: fixed; left: calc(var(--tray) + 24px + var(--sl)); top: calc(14px + var(--st)); display: none; align-items: center; gap: 8px; padding: 6px 8px 6px 14px;
+    border-radius: 999px; font-weight: 800; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100vw - var(--tray) - 640px);
+  }
+  .chip.on { display: flex; }
+  .chip button { flex: 0 0 auto; height: 40px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,0.78); display: flex; align-items: center; gap: 5px; font-weight: 800; font-size: 13px; }
+  .chip button svg { width: 20px; height: 20px; }
+  .chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .chip .nm svg { width: 18px; height: 18px; flex: 0 0 auto; }
+  #hand { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); }
+  #viewChip { background: linear-gradient(135deg, #35d08a, #18a878); color: #04281a; }
+  .chip { overflow-x: auto; scrollbar-width: none; }
+  .chip::-webkit-scrollbar { display: none; }
+  @media (max-width: 1500px) { .chip { top: calc(84px + var(--st)); max-width: calc(100vw - var(--tray) - 240px - var(--sl) - var(--sr)); } }
+
+  #hint { position: fixed; left: calc(var(--tray) + 26px + var(--sl)); bottom: calc(16px + var(--sb)); padding: 9px 15px; border-radius: 999px; color: var(--ink-soft); font-size: 13px; font-weight: 700; transition: opacity 0.4s; pointer-events: none; }
+  #hint.off { opacity: 0; }
+  .dock.on ~ #hint { display: none; }
+  #toast { position: fixed; left: 50%; top: calc(90px + var(--st)); transform: translateX(-50%); padding: 11px 20px; border-radius: 999px; background: var(--glass-strong); border: 1px solid var(--line); color: #fff; font-weight: 800; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9; }
+  #toast.on { opacity: 1; }
+
+  body.view #undo, body.view #redo, body.view #clear, body.view #save, body.view #trayFoot, body.view .editSep, body.view #hint { display: none; }
+  body.busy #tools, body.busy #tray, body.busy .dock, body.busy .chip, body.busy #trayShow { pointer-events: none; opacity: 0.45; transition: opacity 0.2s; }
+
+  /* ---------- disasters, light, build-along, trash ---------- */
+  #disPop, #lightPop { flex-wrap: wrap; max-width: 420px; justify-content: flex-end; }
+  .dis { width: 92px; height: 86px; border-radius: 16px; background: var(--raise); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800; }
+  .dis span { font-size: 30px; line-height: 1; }
+  .dis:active { transform: scale(0.94); background: var(--raise-hi); }
+  .dis.on { box-shadow: 0 0 0 3px var(--accent) inset; }
+  #sunBox { display: none; flex: 1 1 100%; align-items: center; gap: 10px; padding: 4px 6px 0; font-size: 12px; font-weight: 800; color: var(--ink-soft); }
+  #sunBox.on { display: flex; }
+  #sunBox input { flex: 1; }
+  #alongBox { display: flex; flex-direction: column; gap: 6px; align-items: center; padding: 0 8px; min-width: 250px; }
+  #alongBox b { font-size: 15px; }
+  #alongTrack { width: 100%; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.16); overflow: hidden; }
+  #alongFill { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.25s; }
+  #alongCount { font-size: 13px; font-weight: 800; color: var(--ink-soft); }
+  .card.nope { animation: nope 0.35s; }
+  @keyframes nope { 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+  .card.want { animation: want 0.9s ease-in-out infinite; border-color: var(--accent); }
+  @keyframes want { 50% { transform: scale(1.09); box-shadow: 0 0 0 4px rgba(255, 183, 3, 0.75), 0 8px 26px rgba(255, 150, 0, 0.5); } }
+  #trash { position: fixed; left: calc(var(--tray) + 28px + var(--sl)); bottom: calc(18px + var(--sb)); width: 92px; height: 92px; border-radius: 50%; display: none; place-items: center; color: var(--danger); z-index: 4; transition: transform 0.12s, background 0.12s; }
+  #trash svg { width: 38px; height: 38px; }
+  body.dragging #trash { display: grid; }
+  body.dragging .dock, body.dragging #hint { display: none; }
+  #trash.hot { transform: scale(1.2); background: var(--danger); color: #fff; }
+  #dragChip { position: fixed; left: 0; top: 0; width: 84px; height: 84px; margin: -42px 0 0 -42px; display: none; pointer-events: none; z-index: 8; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.45)); }
+  #dragChip svg { width: 100%; height: 100%; }
+  #confetti { position: fixed; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; z-index: 8; }
+  .headBtns { display: flex; align-items: center; gap: 8px; }
+
+  /* ---------- build instructions ---------- */
+  #guidePages { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 22px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 14px; }
+  .gCover { grid-column: 1 / -1; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; background: var(--raise); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+  .gCover img { width: min(360px, 100%); border-radius: 12px; display: block; }
+  .gCover h3 { margin: 0 0 4px; font-size: 26px; }
+  .gCover p { margin: 0 0 10px; font-weight: 700; color: var(--ink-soft); }
+  .gParts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gPart { display: flex; align-items: center; gap: 4px; padding: 4px 10px 4px 6px; border-radius: 12px; background: rgba(0,0,0,0.22); font-weight: 800; font-size: 14px; }
+  .gPart svg { width: 34px; height: 34px; }
+  .gStep { position: relative; background: var(--raise); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; break-inside: avoid; }
+  .gStep img { width: 100%; display: block; }
+  .gStep .num { position: absolute; left: 10px; top: 10px; min-width: 38px; height: 38px; padding: 0 10px; border-radius: 19px; background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: 18px; display: grid; place-items: center; }
+  .gStep .gParts { padding: 8px 10px 10px; }
+  @media print {
+    @page { margin: 12mm; }
+    html, body { height: auto; overflow: visible; background: #fff !important; }
+    body > *:not(#guide) { display: none !important; }
+    #guide { position: static; display: block !important; background: none; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    #guide .sheet { width: 100%; max-height: none; background: #fff; color: #111; border: 0; box-shadow: none; border-radius: 0; overflow: visible; display: block; }
+    #guide .sheetHead { border: 0; padding: 0 0 8px; }
+    #guide .sheetHead p { color: #444; }
+    #guide .headBtns { display: none; }
+    #guidePages { overflow: visible; padding: 0; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .gCover, .gStep { background: #fff; border: 1px solid #bbb; color: #111; }
+    .gCover p { color: #444; }
+    .gPart { background: #eee; color: #111; }
+    .gPart svg polygon { stroke: #333; }
+  }
+
+  /* ---------- dialogs ---------- */
+  .modal { position: fixed; inset: 0; display: none; background: rgba(5, 9, 18, 0.62); padding: 24px; z-index: 5; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  .modal.on { display: grid; place-items: center; }
+  .sheet { width: min(940px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow); overflow: hidden; }
+  .sheetHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 16px 12px 24px; border-bottom: 1px solid var(--line); }
+  .sheetHead h2 { margin: 0; font-size: 22px; font-weight: 800; }
+  .sheetHead p { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  #shelfGrid { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 22px 24px; display: grid; grid-auto-rows: max-content; align-content: start; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 16px; }
+  #shelfEmpty { padding: 34px 24px 44px; text-align: center; color: var(--ink-soft); font-weight: 700; }
+  .build { background: var(--raise); border-radius: 18px; border: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; }
+  .build .pic { display: block; width: 100%; aspect-ratio: 4 / 3; background: #dfe6f0; }
+  .build .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .build .row { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 10px; }
+  input.text { font: inherit; font-weight: 800; font-size: 14px; color: var(--ink); border: 1px solid transparent; border-radius: 9px; padding: 6px 7px; background: transparent; user-select: text; -webkit-user-select: text; min-width: 0; }
+  input.text:focus { outline: none; border-color: var(--accent); background: rgba(255,255,255,0.08); }
+  .build input.text { flex: 1; }
+  .build .n { font-size: 12px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+  .del { flex: 0 0 auto; height: 36px; min-width: 36px; padding: 0 7px; border-radius: 10px; display: grid; place-items: center; color: var(--ink-soft); font-size: 12px; font-weight: 800; }
+  .del svg { width: 20px; height: 20px; }
+  .del.sure { background: var(--danger); color: #fff; }
+
+  /* ---------- tile piles ---------- */
+  #pilesList { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .pile { flex: 0 0 auto; background: var(--raise); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .pile.use { border-color: rgba(53, 208, 138, 0.55); }
+  .pileHead { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; }
+  .pileHead input.text { flex: 1; font-size: 16px; }
+  .pileHead .tot { font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+  .switch { position: relative; flex: 0 0 auto; width: 54px; height: 32px; border-radius: 16px; background: rgba(255,255,255,0.16); transition: background 0.15s; }
+  .switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform 0.15s; box-shadow: 0 2px 5px rgba(0,0,0,0.35); }
+  .switch.on { background: var(--good); }
+  .switch.on::after { transform: translateX(22px); }
+  .pileBtn { flex: 0 0 auto; height: 38px; padding: 0 13px; border-radius: 11px; background: var(--raise-hi); font-weight: 800; font-size: 13px; }
+  .pileGrid { display: none; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; padding: 4px 14px 14px; }
+  .pile.open .pileGrid { display: grid; }
+  .pc { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 14px; background: rgba(0,0,0,0.2); }
+  .pc svg { width: 40px; height: 40px; flex: 0 0 auto; margin-right: auto; }
+  .pc button { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; background: var(--raise-hi); font-size: 20px; font-weight: 800; line-height: 1; }
+  .pc input { width: 44px; text-align: center; font: inherit; font-weight: 800; font-size: 16px; color: var(--ink); background: transparent; border: 0; border-bottom: 2px solid var(--line); padding: 3px 0; -moz-appearance: textfield; user-select: text; -webkit-user-select: text; }
+  .pc input::-webkit-outer-spin-button, .pc input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pc input:focus { outline: none; border-color: var(--accent); }
+  .sheetFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 16px; border-top: 1px solid var(--line); }
+  #pilesSum { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+  .cta { flex: 0 0 auto; height: 46px; padding: 0 18px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+<canvas id="scene" tabindex="0"></canvas>
+
+<aside id="tray" class="glass">
+  <div id="brand">
+    <img class="logo" src="./icon.svg" alt="">
+    <div class="name"><b>Wyatt's</b><span>Workshop</span></div>
+    <button class="ghostBtn" id="trayHide" title="Hide the tiles"><svg class="ic" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/><path d="M19 5v14"/></svg></button>
+  </div>
+  <div id="trayBar"><h1 id="trayTitle">My Tiles</h1><span id="usedCount"></span></div>
+  <div id="standSeg" title="How new tiles arrive (S)">
+    <button id="standUp"><svg class="ic" viewBox="0 0 24 24"><path d="M7 20V5h10v15"/><path d="M3 20h18"/></svg>Stand up</button>
+    <button id="standFlat"><svg class="ic" viewBox="0 0 24 24"><path d="m3 15 6-4h12l-6 4z"/><path d="M3 15v2l12 0 6-4v-2"/></svg>Lie flat</button>
+  </div>
+  <div id="cards"></div>
+  <div id="trayFoot">
+    <button class="pill" id="pilesBtn" title="Choose which piles of tiles to build with"><svg class="ic" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/></svg>Piles</button>
+    <button class="pill" id="mode" title="Only the tiles we own, or as many as you like">Mine</button>
+  </div>
+</aside>
+<button id="trayShow" class="glass" title="Show the tiles"><img src="./icon.svg" alt=""></button>
+
+<div id="tools" class="glass">
+  <button class="tool" id="undo" title="Undo"><svg class="ic" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+  <button class="tool" id="redo" title="Redo"><svg class="ic" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+  <button class="tool" id="clear" title="Start over (Undo brings it back)"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 13h10l1-13"/></svg></button>
+  <span class="sep editSep"></span>
+  <button class="tool primary" id="save" title="Save this build"><svg class="ic" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3"/><path d="M8 21v-7h8v7"/></svg></button>
+  <button class="tool" id="builds" title="My Builds"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button>
+  <span class="sep"></span>
+  <button class="tool" id="gravity" title="Gravity check: will it stand up?"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></svg></button>
+  <button class="tool quake" id="quake" title="Disasters!"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12h3l2-6 4 13 3-10 2 5 2-2h4"/></svg></button>
+  <span class="sep"></span>
+  <button class="tool" id="light" title="Sunlight and night light"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.500 17.500 5 19"/></svg></button>
+  <button class="tool" id="home" title="Back to the starting view"><svg class="ic" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></button>
+  <button class="tool" id="bg" title="Background colour"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.6 0 2-1 2-2s-.6-2 1-2h2a4 4 0 0 0 4-4c0-4.5-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7.2" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></button>
+</div>
+<div id="bgPop" class="pop glass"></div>
+<div id="disPop" class="pop glass">
+  <button class="dis" data-dis="quake"><span>🌋</span>Earthquake</button>
+  <button class="dis" data-dis="tornado"><span>🌪️</span>Tornado</button>
+  <button class="dis" data-dis="ball"><span>⚫</span>Wrecking ball</button>
+  <button class="dis" data-dis="stomp"><span>🦶</span>Giant stomp</button>
+  <button class="dis" data-dis="blast"><span>🚀</span>Blast off</button>
+</div>
+<div id="lightPop" class="pop glass">
+  <button class="dis" data-light="day"><span>💡</span>Normal</button>
+  <button class="dis" data-light="sun"><span>☀️</span>Sunshine</button>
+  <button class="dis" data-light="night"><span>🌙</span>Night glow</button>
+  <label id="sunBox"><span>Move the sun</span><input id="sunPos" type="range" min="0" max="100" value="16"></label>
+</div>
+<div id="gravChip" class="glass"><span class="dot"></span><span id="gravText">Stands strong</span><button id="gravDrop" hidden>Drop test</button></div>
+
+<div class="chip" id="hand">
+  <span class="nm" id="handName">Tile</span>
+  <button id="handTurn" title="Turn (R)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>Turn</button>
+  <button id="handFlip" title="Flip (F)"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="m8 7-5 5 5 5z"/><path d="m16 7 5 5-5 5z"/></svg>Flip</button>
+  <button id="handDrop" title="Put it back (Esc)"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+</div>
+
+<div class="chip" id="viewChip">
+  <span class="nm"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="viewName">Build</span></span>
+  <button id="alongBtn" title="Build it yourself, one tile at a time"><svg class="ic" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.8-4.500 4.300 1.100 6.100L12 16.900 6.600 19.800l1.100-6.100L3.200 9.400l6.100-.8z"/></svg>Build it</button>
+  <button id="guideBtn" title="See build instructions"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h3"/></svg>Instructions</button>
+  <button id="editCopy" title="Make a copy you can change"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Edit a copy</button>
+  <button id="backToBuild" title="Back to building (Esc)"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+</div>
+
+<div class="dock glass" id="bar">
+  <div id="tiltBox">
+    <input id="tilt" type="range" min="-180" max="180" step="1" value="0" title="Tilt">
+    <div id="quick">
+      <button id="tiltSign" title="Tilt the other way">+ / −</button>
+      <button data-tilt="0">Flat</button>
+      <button data-tilt="30">30°</button>
+      <button data-tilt="45">45°</button>
+      <button data-tilt="60">60°</button>
+      <button data-tilt="75">75°</button>
+      <button data-tilt="90">90°</button>
+      <button data-tilt="105">105°</button>
+      <button data-tilt="120">120°</button>
+      <button data-tilt="135">135°</button>
+    </div>
+  </div>
+  <button class="act" id="turn" title="Turn: use a different edge (R)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>Turn</button>
+  <button class="act" id="flip" title="Flip over (F)"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="m8 7-5 5 5 5z"/><path d="m16 7 5 5-5 5z"/></svg>Flip</button>
+  <button class="act" id="slide" title="Slide along the edge"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/></svg>Slide</button>
+  <button class="act" id="spin" title="Spin on the table"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg>Spin</button>
+  <button class="act" id="magic" title="Magic fold: fold the tiles around this one up into a box or pyramid"><svg class="ic" viewBox="0 0 24 24"><path d="m4 20 11-11"/><path d="M15 4v3M13.500 5.500h3M19 9v3M17.500 10.500h3M9 3v2M8 4h2"/></svg>Magic</button>
+  <button class="act" id="paint" title="Change this tile's colour"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Colour</button>
+  <button class="act" id="copyTile" title="Pick up another one of these"><svg class="ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Again</button>
+  <button class="act danger" id="remove" title="Take away (Delete)"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 13h10l1-13"/></svg>Remove</button>
+</div>
+
+<div id="paintPop" class="pop glass"></div>
+
+<div class="dock glass" id="player">
+  <button class="act" id="prev" title="Step back"><svg class="ic" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Back</button>
+  <button class="act big" id="play" title="Play"><svg class="ic" id="playIcon" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+  <button class="act" id="next" title="Next tile"><svg class="ic" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>Next</button>
+  <div id="scrubBox">
+    <input id="scrub" type="range" min="0" max="1" step="1" value="0" title="Steps">
+    <span id="count">0 / 0</span>
+  </div>
+  <button class="act" id="speed" title="Speed"><span>1×</span>Speed</button>
+</div>
+
+<div class="dock glass" id="alongDock">
+  <button class="act" id="alongStop" title="Stop building along"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>Stop</button>
+  <div id="alongBox"><b id="alongText">Tap the glowing tile</b><div id="alongTrack"><i id="alongFill"></i></div><span id="alongCount">0 / 0</span></div>
+  <button class="act" id="alongHelp" title="Do this one for me"><svg class="ic" viewBox="0 0 24 24"><path d="M9 9a3 3 0 1 1 4.500 2.600c-.9.500-1.500 1.200-1.500 2.400"/><circle cx="12" cy="18" r=".6"/></svg>Help</button>
+</div>
+<div id="trash" class="glass"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 13h10l1-13"/></svg></div>
+<div id="dragChip"></div>
+<canvas id="confetti"></canvas>
+
+<div id="hint" class="glass">Pick a tile, then tap the table. Tap near a tile's edge to snap on.</div>
+<div id="toast"></div>
+
+<div id="shelf" class="modal">
+  <div class="sheet">
+    <div class="sheetHead">
+      <div><h2>My Builds</h2><p>Tap a build to open it, then press Play to see how it goes together.</p></div>
+      <button class="tool" id="shelfClose" title="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div id="shelfEmpty">No saved builds yet. Build something, then press the yellow Save button.</div>
+    <div id="shelfGrid"></div>
+  </div>
+</div>
+
+<div id="piles" class="modal">
+  <div class="sheet">
+    <div class="sheetHead">
+      <div><h2>Tile Piles</h2><p>Each pile is a set of tiles. Switch on the piles you are building with; switched-on piles are added together.</p></div>
+      <button class="tool" id="pilesClose" title="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div id="pilesList"></div>
+    <div class="sheetFoot">
+      <span id="pilesSum"></span>
+      <button class="cta" id="pilesAdd"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a pile</button>
+    </div>
+  </div>
+</div>
+
+<div id="guide" class="modal">
+  <div class="sheet">
+    <div class="sheetHead">
+      <div><h2 id="guideTitle">Build instructions</h2><p>Follow the steps in order. The yellow tiles with arrows are the new ones.</p></div>
+      <div class="headBtns"><button class="cta" id="guidePrint"><svg class="ic" viewBox="0 0 24 24"><path d="M7 8V3h10v5"/><rect x="3" y="8" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>Print or save PDF</button><button class="tool" id="guideClose" title="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    </div>
+    <div id="guidePages"></div>
+  </div>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
